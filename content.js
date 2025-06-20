@@ -3,6 +3,7 @@
 let isInspecting = false;
 let overlayElement = null;
 let highlightedElement = null;
+let currentElementInfo = null; // Store current element info for copying
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -51,6 +52,11 @@ function stopInspecting() {
 function handleElementClick(event) {
     if (!isInspecting) return;
     
+    // Don't inspect if clicking inside the inspector overlay
+    if (overlayElement && (event.target === overlayElement || overlayElement.contains(event.target))) {
+        return; // Allow normal click behavior in the overlay
+    }
+    
     event.preventDefault();
     event.stopPropagation();
     
@@ -62,6 +68,7 @@ function handleMouseOver(event) {
     if (!isInspecting) return;
     
     const element = event.target;
+    // Don't highlight elements inside the inspector overlay
     if (element !== overlayElement && !overlayElement?.contains(element)) {
         highlightElement(element);
     }
@@ -103,6 +110,7 @@ function inspectElement(element) {
     highlightElement(element);
     
     const elementInfo = getElementInfo(element);
+    currentElementInfo = elementInfo; // Store for copying
     showInspectorOverlay(elementInfo);
 }
 
@@ -184,6 +192,16 @@ function showInspectorOverlay(elementInfo) {
         overlayElement = null;
         clearHighlight();
     });
+    
+    // Add copy button functionality
+    const copyButtons = overlayElement.querySelectorAll('.shadow-inspector-copy-btn');
+    copyButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent any other click handlers
+            const copyType = btn.getAttribute('data-copy-type');
+            handleCopy(copyType);
+        });
+    });
 }
 
 function createOverlayContent(info) {
@@ -194,7 +212,7 @@ function createOverlayContent(info) {
         </div>
         <div class="shadow-inspector-content">
             <div class="shadow-inspector-section">
-                <h3>📋 Element Details</h3>
+                <h3>📋 Element Details <button class="shadow-inspector-copy-btn" data-copy-type="element" aria-label="Copy element details">Copy</button></h3>
                 <div class="shadow-inspector-property"><strong>Tag:</strong> &lt;${info.tagName}&gt;</div>
                 <div class="shadow-inspector-property"><strong>ID:</strong> ${info.id}</div>
                 <div class="shadow-inspector-property"><strong>Classes:</strong> ${info.classes}</div>
@@ -202,12 +220,12 @@ function createOverlayContent(info) {
             </div>
             
             <div class="shadow-inspector-section">
-                <h3>🏷️ Attributes</h3>
+                <h3>🏷️ Attributes <button class="shadow-inspector-copy-btn" data-copy-type="attributes">Copy</button></h3>
                 ${info.attributes.map(attr => `<div class="shadow-inspector-property">${attr}</div>`).join('')}
             </div>
             
             <div class="shadow-inspector-section">
-                <h3>🎨 Key Styles</h3>
+                <h3>🎨 Key Styles <button class="shadow-inspector-copy-btn" data-copy-type="styles">Copy</button></h3>
                 <div class="shadow-inspector-property"><strong>display:</strong> ${info.computedStyles.display}</div>
                 <div class="shadow-inspector-property"><strong>position:</strong> ${info.computedStyles.position}</div>
                 <div class="shadow-inspector-property"><strong>pointer-events:</strong> ${info.computedStyles.pointerEvents}</div>
@@ -219,7 +237,7 @@ function createOverlayContent(info) {
     if (info.hasShadowRoot) {
         content += `
             <div class="shadow-inspector-section">
-                <h3>🌑 Shadow DOM Details</h3>
+                <h3>🌑 Shadow DOM Details <button class="shadow-inspector-copy-btn" data-copy-type="shadow">Copy</button></h3>
                 <div class="shadow-inspector-shadow-info">
                     <div class="shadow-inspector-property"><strong>Shadow Root Mode:</strong> ${info.shadowRootInfo.mode}</div>
                     <div class="shadow-inspector-property"><strong>Child Elements:</strong> ${info.shadowRootInfo.childCount}</div>
@@ -286,3 +304,97 @@ function showMessage(text, duration = 3000) {
 
 // Initialize
 console.log('Shadow DOM Inspector loaded');
+
+// Handle copy functionality
+function handleCopy(copyType) {
+    if (!currentElementInfo) return;
+    
+    let text = '';
+    
+    switch (copyType) {
+        case 'element':
+            text = `Element Details:
+Tag: <${currentElementInfo.tagName}>
+ID: ${currentElementInfo.id}
+Classes: ${currentElementInfo.classes}
+Text: ${currentElementInfo.textContent}`;
+            break;
+            
+        case 'attributes':
+            text = `Attributes:
+${currentElementInfo.attributes.join('\n')}`;
+            break;
+            
+        case 'styles':
+            const styles = currentElementInfo.computedStyles;
+            text = `Key Styles:
+display: ${styles.display}
+position: ${styles.position}
+pointer-events: ${styles.pointerEvents}
+visibility: ${styles.visibility}
+opacity: ${styles.opacity}`;
+            break;
+            
+        case 'shadow':
+            if (currentElementInfo.hasShadowRoot) {
+                const shadow = currentElementInfo.shadowRootInfo;
+                text = `Shadow DOM Details:
+Shadow Root Mode: ${shadow.mode}
+Child Elements: ${shadow.childCount}
+
+Shadow DOM Children:`;
+                
+                shadow.children.forEach(child => {
+                    text += `
+<${child.tagName}>
+  ID: ${child.id}
+  Classes: ${child.classes}
+  Text: ${child.textContent}`;
+                });
+            } else {
+                text = 'This element does not have a Shadow DOM';
+            }
+            break;
+    }
+    
+    copyToClipboard(text);
+}
+
+function copyToClipboard(text) {
+    // Try modern clipboard API first
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            showMessage('✅ Copied to clipboard!', 2000);
+        }).catch((err) => {
+            console.error('Clipboard write failed:', err);
+            fallbackCopy(text);
+        });
+    } else {
+        fallbackCopy(text);
+    }
+}
+
+function fallbackCopy(text) {
+    try {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        if (successful) {
+            showMessage('✅ Copied to clipboard!', 2000);
+        } else {
+            showMessage('❌ Copy failed - please select text manually', 3000);
+        }
+    } catch (err) {
+        console.error('Fallback copy failed:', err);
+        showMessage('❌ Copy failed - please select text manually', 3000);
+    }
+}

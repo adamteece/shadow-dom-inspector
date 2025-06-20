@@ -49,6 +49,10 @@
     padding: 15px !important;
     max-height: calc(80vh - 60px) !important;
     overflow-y: auto !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
 }
 
 .shadow-inspector-section {
@@ -69,6 +73,11 @@
     background: #f8f9fa !important;
     border-radius: 3px !important;
     font-family: 'Courier New', monospace !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    cursor: text !important;
 }
 
 .shadow-inspector-property strong {
@@ -89,6 +98,11 @@
     padding: 5px !important;
     border-left: 2px solid #28a745 !important;
     background: #f8fff8 !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    cursor: text !important;
 }
 
 .shadow-inspector-highlight {
@@ -104,4 +118,24 @@
     background: #f0f0f0 !important;
     border-radius: 3px !important;
     text-align: center !important;
+}
+
+.shadow-inspector-copy-btn {
+    background: #28a745 !important;
+    color: white !important;
+    border: none !important;
+    padding: 4px 8px !important;
+    border-radius: 3px !important;
+    font-size: 10px !important;
+    cursor: pointer !important;
+    margin-left: 8px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.shadow-inspector-copy-btn:hover {
+    background: #218838 !important;
+}
+
+.shadow-inspector-copy-btn:active {
+    background: #1e7e34 !important;
 }

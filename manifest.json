@@ -2,10 +2,10 @@
   "manifest_version": 3,
   "name": "Shadow DOM Inspector",
   "version": "1.0",
-  "description": "Inspect elements and their Shadow DOM details to debug tracking issues",
-  "permissions": [
+  "description": "Inspect elements and their Shadow DOM details to debug tracking issues",  "permissions": [
     "activeTab",
-    "scripting"
+    "scripting",
+    "clipboardWrite"
   ],
   "action": {
     "default_popup": "popup.html",
