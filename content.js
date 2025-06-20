@@ -184,18 +184,20 @@ function showInspectorOverlay(elementInfo) {
             // Re-attach copy button functionality to new buttons
             const copyButtons = overlayElement.querySelectorAll('.shadow-inspector-copy-btn');
             copyButtons.forEach(btn => {
-                // Remove any existing listeners to avoid duplicates
-                btn.replaceWith(btn.cloneNode(true));
-            });
-            
-            // Re-add copy button functionality
-            const newCopyButtons = overlayElement.querySelectorAll('.shadow-inspector-copy-btn');
-            newCopyButtons.forEach(btn => {
-                btn.addEventListener('click', (e) => {
+                // Remove any existing click event listeners to avoid duplicates
+                const oldListener = btn.__copyClickListener;
+                if (oldListener) {
+                    btn.removeEventListener('click', oldListener);
+                }
+                
+                // Add the new click event listener and store it for future reference
+                const newListener = (e) => {
                     e.stopPropagation();
                     const copyType = btn.getAttribute('data-copy-type');
                     handleCopy(copyType);
-                });
+                };
+                btn.addEventListener('click', newListener);
+                btn.__copyClickListener = newListener; // Store the listener for later removal
             });
             
             return; // Exit early, don't create new overlay
