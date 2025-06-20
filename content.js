@@ -212,7 +212,7 @@ function createOverlayContent(info) {
         </div>
         <div class="shadow-inspector-content">
             <div class="shadow-inspector-section">
-                <h3>📋 Element Details <button class="shadow-inspector-copy-btn" data-copy-type="element">Copy</button></h3>
+                <h3>📋 Element Details <button class="shadow-inspector-copy-btn" data-copy-type="element" aria-label="Copy element details">Copy</button></h3>
                 <div class="shadow-inspector-property"><strong>Tag:</strong> &lt;${info.tagName}&gt;</div>
                 <div class="shadow-inspector-property"><strong>ID:</strong> ${info.id}</div>
                 <div class="shadow-inspector-property"><strong>Classes:</strong> ${info.classes}</div>
