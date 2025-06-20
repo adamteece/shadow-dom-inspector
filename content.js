@@ -496,4 +496,51 @@ function makeDraggable(element) {
         
         startX = touch.clientX;
         startY = touch.clientY;
+        const rect = element.getBoundingClientRect();
+        startLeft = rect.left;
+        startTop = rect.top;
         
+        document.addEventListener('touchmove', handleTouchMove, { passive: false });
+        document.addEventListener('touchend', handleTouchEnd);
+        
+        e.preventDefault();
+    });
+    
+    function handleTouchMove(e) {
+        if (!isDragging) return;
+        
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - startX;
+        const deltaY = touch.clientY - startY;
+        
+        let newLeft = startLeft + deltaX;
+        let newTop = startTop + deltaY;
+        
+        // Keep within viewport bounds
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const elementWidth = element.offsetWidth;
+        const elementHeight = element.offsetHeight;
+        
+        newLeft = Math.max(10, Math.min(newLeft, viewportWidth - elementWidth - 10));
+        newTop = Math.max(10, Math.min(newTop, viewportHeight - elementHeight - 10));
+        
+        element.style.left = newLeft + 'px';
+        element.style.top = newTop + 'px';
+        element.style.right = 'auto';
+        
+        e.preventDefault();
+    }
+    
+    function handleTouchEnd(e) {
+        if (!isDragging) return;
+        
+        isDragging = false;
+        element.classList.remove('dragging');
+        
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
+        
+        e.preventDefault();
+    }
+}
