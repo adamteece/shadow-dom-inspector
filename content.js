@@ -202,12 +202,18 @@ function showInspectorOverlay(elementInfo) {
             handleCopy(copyType);
         });
     });
+    
+    // Add drag functionality
+    makeDraggable(overlayElement);
 }
 
 function createOverlayContent(info) {
     let content = `
         <div class="shadow-inspector-header">
-            <span>🔍 Element Inspector</span>
+            <div class="shadow-inspector-drag-handle">
+                <span class="shadow-inspector-drag-icon">⋮⋮</span>
+                <span>🔍 Element Inspector</span>
+            </div>
             <button class="shadow-inspector-close">×</button>
         </div>
         <div class="shadow-inspector-content">
@@ -398,3 +404,96 @@ function fallbackCopy(text) {
         showMessage('❌ Copy failed - please select text manually', 3000);
     }
 }
+
+// Make the inspector overlay draggable
+function makeDraggable(element) {
+    const header = element.querySelector('.shadow-inspector-header');
+    const dragHandle = element.querySelector('.shadow-inspector-drag-handle');
+    
+    if (!header || !dragHandle) return;
+    
+    let isDragging = false;
+    let startX, startY, startLeft, startTop;
+    
+    // Prevent text selection during drag
+    const preventSelection = (e) => {
+        e.preventDefault();
+        return false;
+    };
+    
+    dragHandle.addEventListener('mousedown', (e) => {
+        // Don't start drag if clicking on close button
+        if (e.target.closest('.shadow-inspector-close')) return;
+        
+        isDragging = true;
+        element.classList.add('dragging');
+        
+        startX = e.clientX;
+        startY = e.clientY;
+        
+        const rect = element.getBoundingClientRect();
+        startLeft = rect.left;
+        startTop = rect.top;
+        
+        // Prevent text selection during drag
+        document.addEventListener('selectstart', preventSelection);
+        document.addEventListener('dragstart', preventSelection);
+        
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        
+        e.preventDefault();
+    });
+    
+    function handleMouseMove(e) {
+        if (!isDragging) return;
+        
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+        
+        let newLeft = startLeft + deltaX;
+        let newTop = startTop + deltaY;
+        
+        // Keep the overlay within viewport bounds
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const elementWidth = element.offsetWidth;
+        const elementHeight = element.offsetHeight;
+        
+        // Constrain to viewport
+        newLeft = Math.max(10, Math.min(newLeft, viewportWidth - elementWidth - 10));
+        newTop = Math.max(10, Math.min(newTop, viewportHeight - elementHeight - 10));
+        
+        element.style.left = newLeft + 'px';
+        element.style.top = newTop + 'px';
+        element.style.right = 'auto'; // Remove right positioning
+        
+        e.preventDefault();
+    }
+    
+    function handleMouseUp(e) {
+        if (!isDragging) return;
+        
+        isDragging = false;
+        element.classList.remove('dragging');
+        
+        // Remove event listeners
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('selectstart', preventSelection);
+        document.removeEventListener('dragstart', preventSelection);
+        
+        e.preventDefault();
+    }
+    
+    // Also handle touch events for mobile devices
+    dragHandle.addEventListener('touchstart', (e) => {
+        if (e.target.closest('.shadow-inspector-close')) return;
+        
+        const touch = e.touches[0];
+        isDragging = true;
+        element.classList.add('dragging');
+        
+        startX = touch.clientX;
+        startY = touch.clientY;
+        
