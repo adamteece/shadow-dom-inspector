@@ -3,6 +3,7 @@
 let isInspecting = false;
 let overlayElement = null;
 let highlightedElement = null;
+let currentElementInfo = null; // Store current element info for copying
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -51,6 +52,11 @@ function stopInspecting() {
 function handleElementClick(event) {
     if (!isInspecting) return;
     
+    // Don't inspect if clicking inside the inspector overlay
+    if (overlayElement && (event.target === overlayElement || overlayElement.contains(event.target))) {
+        return; // Allow normal click behavior in the overlay
+    }
+    
     event.preventDefault();
     event.stopPropagation();
     
@@ -62,6 +68,7 @@ function handleMouseOver(event) {
     if (!isInspecting) return;
     
     const element = event.target;
+    // Don't highlight elements inside the inspector overlay
     if (element !== overlayElement && !overlayElement?.contains(element)) {
         highlightElement(element);
     }
@@ -103,6 +110,7 @@ function inspectElement(element) {
     highlightElement(element);
     
     const elementInfo = getElementInfo(element);
+    currentElementInfo = elementInfo; // Store for copying
     showInspectorOverlay(elementInfo);
 }
 
@@ -184,6 +192,15 @@ function showInspectorOverlay(elementInfo) {
         overlayElement = null;
         clearHighlight();
     });
+    
+    // Add copy button functionality
+    const copyButtons = overlayElement.querySelectorAll('.shadow-inspector-copy-btn');
+    copyButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent any other click handlers
+            // The onclick attributes in the HTML will handle the actual copy
+        });
+    });
 }
 
 function createOverlayContent(info) {
@@ -194,7 +211,7 @@ function createOverlayContent(info) {
         </div>
         <div class="shadow-inspector-content">
             <div class="shadow-inspector-section">
-                <h3>📋 Element Details</h3>
+                <h3>📋 Element Details <button class="shadow-inspector-copy-btn" onclick="copyElementDetails()">Copy</button></h3>
                 <div class="shadow-inspector-property"><strong>Tag:</strong> &lt;${info.tagName}&gt;</div>
                 <div class="shadow-inspector-property"><strong>ID:</strong> ${info.id}</div>
                 <div class="shadow-inspector-property"><strong>Classes:</strong> ${info.classes}</div>
@@ -202,12 +219,12 @@ function createOverlayContent(info) {
             </div>
             
             <div class="shadow-inspector-section">
-                <h3>🏷️ Attributes</h3>
+                <h3>🏷️ Attributes <button class="shadow-inspector-copy-btn" onclick="copyAttributes()">Copy</button></h3>
                 ${info.attributes.map(attr => `<div class="shadow-inspector-property">${attr}</div>`).join('')}
             </div>
             
             <div class="shadow-inspector-section">
-                <h3>🎨 Key Styles</h3>
+                <h3>🎨 Key Styles <button class="shadow-inspector-copy-btn" onclick="copyStyles()">Copy</button></h3>
                 <div class="shadow-inspector-property"><strong>display:</strong> ${info.computedStyles.display}</div>
                 <div class="shadow-inspector-property"><strong>position:</strong> ${info.computedStyles.position}</div>
                 <div class="shadow-inspector-property"><strong>pointer-events:</strong> ${info.computedStyles.pointerEvents}</div>
@@ -219,7 +236,7 @@ function createOverlayContent(info) {
     if (info.hasShadowRoot) {
         content += `
             <div class="shadow-inspector-section">
-                <h3>🌑 Shadow DOM Details</h3>
+                <h3>🌑 Shadow DOM Details <button class="shadow-inspector-copy-btn" onclick="copyShadowDOM()">Copy</button></h3>
                 <div class="shadow-inspector-shadow-info">
                     <div class="shadow-inspector-property"><strong>Shadow Root Mode:</strong> ${info.shadowRootInfo.mode}</div>
                     <div class="shadow-inspector-property"><strong>Child Elements:</strong> ${info.shadowRootInfo.childCount}</div>
@@ -286,3 +303,75 @@ function showMessage(text, duration = 3000) {
 
 // Initialize
 console.log('Shadow DOM Inspector loaded');
+
+// Copy functions for the inspector overlay
+window.copyElementDetails = function() {
+    if (!currentElementInfo) return;
+    
+    const text = `Element Details:
+Tag: <${currentElementInfo.tagName}>
+ID: ${currentElementInfo.id}
+Classes: ${currentElementInfo.classes}
+Text: ${currentElementInfo.textContent}`;
+    
+    copyToClipboard(text);
+};
+
+window.copyAttributes = function() {
+    if (!currentElementInfo) return;
+    
+    const text = `Attributes:
+${currentElementInfo.attributes.join('\n')}`;
+    
+    copyToClipboard(text);
+};
+
+window.copyStyles = function() {
+    if (!currentElementInfo) return;
+    
+    const styles = currentElementInfo.computedStyles;
+    const text = `Key Styles:
+display: ${styles.display}
+position: ${styles.position}
+pointer-events: ${styles.pointerEvents}
+visibility: ${styles.visibility}
+opacity: ${styles.opacity}`;
+    
+    copyToClipboard(text);
+};
+
+window.copyShadowDOM = function() {
+    if (!currentElementInfo || !currentElementInfo.hasShadowRoot) return;
+    
+    const shadow = currentElementInfo.shadowRootInfo;
+    let text = `Shadow DOM Details:
+Shadow Root Mode: ${shadow.mode}
+Child Elements: ${shadow.childCount}
+
+Shadow DOM Children:`;
+    
+    shadow.children.forEach(child => {
+        text += `
+<${child.tagName}>
+  ID: ${child.id}
+  Classes: ${child.classes}
+  Text: ${child.textContent}`;
+    });
+    
+    copyToClipboard(text);
+};
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        showMessage('✅ Copied to clipboard!', 2000);
+    }).catch(() => {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showMessage('✅ Copied to clipboard!', 2000);
+    });
+}
