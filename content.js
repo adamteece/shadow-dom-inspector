@@ -174,7 +174,35 @@ function getShadowRootInfo(shadowRoot) {
 }
 
 function showInspectorOverlay(elementInfo) {
-    // Remove existing overlay
+    if (overlayElement) {
+        // If overlay already exists, just update its content and preserve position
+        const contentDiv = overlayElement.querySelector('.shadow-inspector-content');
+        if (contentDiv) {
+            // Update only the content, keeping the header with drag functionality
+            contentDiv.innerHTML = createOverlayContentBody(elementInfo);
+            
+            // Re-attach copy button functionality to new buttons
+            const copyButtons = overlayElement.querySelectorAll('.shadow-inspector-copy-btn');
+            copyButtons.forEach(btn => {
+                // Remove any existing listeners to avoid duplicates
+                btn.replaceWith(btn.cloneNode(true));
+            });
+            
+            // Re-add copy button functionality
+            const newCopyButtons = overlayElement.querySelectorAll('.shadow-inspector-copy-btn');
+            newCopyButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const copyType = btn.getAttribute('data-copy-type');
+                    handleCopy(copyType);
+                });
+            });
+            
+            return; // Exit early, don't create new overlay
+        }
+    }
+    
+    // Create new overlay (first time or if something went wrong)
     if (overlayElement) {
         overlayElement.remove();
     }
@@ -217,27 +245,36 @@ function createOverlayContent(info) {
             <button class="shadow-inspector-close">×</button>
         </div>
         <div class="shadow-inspector-content">
-            <div class="shadow-inspector-section">
-                <h3>📋 Element Details <button class="shadow-inspector-copy-btn" data-copy-type="element" aria-label="Copy element details">Copy</button></h3>
-                <div class="shadow-inspector-property"><strong>Tag:</strong> &lt;${info.tagName}&gt;</div>
-                <div class="shadow-inspector-property"><strong>ID:</strong> ${info.id}</div>
-                <div class="shadow-inspector-property"><strong>Classes:</strong> ${info.classes}</div>
-                <div class="shadow-inspector-property"><strong>Text:</strong> ${info.textContent}</div>
-            </div>
-            
-            <div class="shadow-inspector-section">
-                <h3>🏷️ Attributes <button class="shadow-inspector-copy-btn" data-copy-type="attributes">Copy</button></h3>
-                ${info.attributes.map(attr => `<div class="shadow-inspector-property">${attr}</div>`).join('')}
-            </div>
-            
-            <div class="shadow-inspector-section">
-                <h3>🎨 Key Styles <button class="shadow-inspector-copy-btn" data-copy-type="styles">Copy</button></h3>
-                <div class="shadow-inspector-property"><strong>display:</strong> ${info.computedStyles.display}</div>
-                <div class="shadow-inspector-property"><strong>position:</strong> ${info.computedStyles.position}</div>
-                <div class="shadow-inspector-property"><strong>pointer-events:</strong> ${info.computedStyles.pointerEvents}</div>
-                <div class="shadow-inspector-property"><strong>visibility:</strong> ${info.computedStyles.visibility}</div>
-                <div class="shadow-inspector-property"><strong>opacity:</strong> ${info.computedStyles.opacity}</div>
-            </div>
+            ${createOverlayContentBody(info)}
+        </div>
+    `;
+    
+    return content;
+}
+
+function createOverlayContentBody(info) {
+    let content = `
+        <div class="shadow-inspector-section">
+            <h3>📋 Element Details <button class="shadow-inspector-copy-btn" data-copy-type="element" aria-label="Copy element details">Copy</button></h3>
+            <div class="shadow-inspector-property"><strong>Tag:</strong> &lt;${info.tagName}&gt;</div>
+            <div class="shadow-inspector-property"><strong>ID:</strong> ${info.id}</div>
+            <div class="shadow-inspector-property"><strong>Classes:</strong> ${info.classes}</div>
+            <div class="shadow-inspector-property"><strong>Text:</strong> ${info.textContent}</div>
+        </div>
+        
+        <div class="shadow-inspector-section">
+            <h3>🏷️ Attributes <button class="shadow-inspector-copy-btn" data-copy-type="attributes">Copy</button></h3>
+            ${info.attributes.map(attr => `<div class="shadow-inspector-property">${attr}</div>`).join('')}
+        </div>
+        
+        <div class="shadow-inspector-section">
+            <h3>🎨 Key Styles <button class="shadow-inspector-copy-btn" data-copy-type="styles">Copy</button></h3>
+            <div class="shadow-inspector-property"><strong>display:</strong> ${info.computedStyles.display}</div>
+            <div class="shadow-inspector-property"><strong>position:</strong> ${info.computedStyles.position}</div>
+            <div class="shadow-inspector-property"><strong>pointer-events:</strong> ${info.computedStyles.pointerEvents}</div>
+            <div class="shadow-inspector-property"><strong>visibility:</strong> ${info.computedStyles.visibility}</div>
+            <div class="shadow-inspector-property"><strong>opacity:</strong> ${info.computedStyles.opacity}</div>
+        </div>
     `;
     
     if (info.hasShadowRoot) {
@@ -274,10 +311,6 @@ function createOverlayContent(info) {
             </div>
         `;
     }
-    
-    content += `
-        </div>
-    `;
     
     return content;
 }
