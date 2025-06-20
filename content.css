@@ -1,0 +1,107 @@
+/* Shadow DOM Inspector Styles */
+
+.shadow-inspector-overlay {
+    position: fixed !important;
+    top: 10px !important;
+    right: 10px !important;
+    width: 400px !important;
+    max-height: 80vh !important;
+    background: white !important;
+    border: 2px solid #1a73e8 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
+    z-index: 999999 !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-size: 12px !important;
+    overflow: hidden !important;
+}
+
+.shadow-inspector-header {
+    background: #1a73e8 !important;
+    color: white !important;
+    padding: 12px 15px !important;
+    font-weight: bold !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+}
+
+.shadow-inspector-close {
+    background: none !important;
+    border: none !important;
+    color: white !important;
+    font-size: 18px !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    width: 20px !important;
+    height: 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 3px !important;
+}
+
+.shadow-inspector-close:hover {
+    background: rgba(255,255,255,0.2) !important;
+}
+
+.shadow-inspector-content {
+    padding: 15px !important;
+    max-height: calc(80vh - 60px) !important;
+    overflow-y: auto !important;
+}
+
+.shadow-inspector-section {
+    margin-bottom: 20px !important;
+}
+
+.shadow-inspector-section h3 {
+    margin: 0 0 10px 0 !important;
+    color: #1a73e8 !important;
+    font-size: 14px !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+    padding-bottom: 5px !important;
+}
+
+.shadow-inspector-property {
+    margin: 8px 0 !important;
+    padding: 5px !important;
+    background: #f8f9fa !important;
+    border-radius: 3px !important;
+    font-family: 'Courier New', monospace !important;
+}
+
+.shadow-inspector-property strong {
+    color: #d73a49 !important;
+    font-weight: bold !important;
+}
+
+.shadow-inspector-shadow-info {
+    background: #fff3cd !important;
+    border: 1px solid #ffc107 !important;
+    border-radius: 5px !important;
+    padding: 10px !important;
+    margin: 10px 0 !important;
+}
+
+.shadow-inspector-shadow-child {
+    margin: 5px 0 5px 15px !important;
+    padding: 5px !important;
+    border-left: 2px solid #28a745 !important;
+    background: #f8fff8 !important;
+}
+
+.shadow-inspector-highlight {
+    outline: 3px solid #ff6b6b !important;
+    outline-offset: 2px !important;
+    background: rgba(255, 107, 107, 0.1) !important;
+}
+
+.shadow-inspector-no-shadow {
+    color: #666 !important;
+    font-style: italic !important;
+    padding: 10px !important;
+    background: #f0f0f0 !important;
+    border-radius: 3px !important;
+    text-align: center !important;
+}

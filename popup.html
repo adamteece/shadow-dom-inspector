@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            width: 300px;
+            padding: 15px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 18px;
+            color: #1a73e8;
+            margin: 0;
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        button {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background: #1557b0;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        
+        .status.active {
+            background: #e8f5e8;
+            color: #2d7d2d;
+            border: 1px solid #4caf50;
+        }
+        
+        .status.inactive {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffc107;
+        }
+        
+        .instructions {
+            font-size: 12px;
+            color: #666;
+            margin-top: 15px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 Shadow DOM Inspector</h1>
+    </div>
+    
+    <div class="controls">
+        <button id="toggleInspector">Start Inspecting</button>
+        <button id="clearHighlight">Clear Highlights</button>
+    </div>
+    
+    <div id="status" class="status inactive">
+        Inspector inactive
+    </div>
+    
+    <div class="instructions">
+        <strong>How to use:</strong><br>
+        1. Click "Start Inspecting"<br>
+        2. Click on any element on the page<br>
+        3. View element and Shadow DOM details<br>
+        4. Perfect for debugging Pendo tracking!
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
