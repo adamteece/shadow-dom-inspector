@@ -174,7 +174,37 @@ function getShadowRootInfo(shadowRoot) {
 }
 
 function showInspectorOverlay(elementInfo) {
-    // Remove existing overlay
+    if (overlayElement) {
+        // If overlay already exists, just update its content and preserve position
+        const contentDiv = overlayElement.querySelector('.shadow-inspector-content');
+        if (contentDiv) {
+            // Update only the content, keeping the header with drag functionality
+            contentDiv.innerHTML = createOverlayContentBody(elementInfo);
+            
+            // Re-attach copy button functionality to new buttons
+            const copyButtons = overlayElement.querySelectorAll('.shadow-inspector-copy-btn');
+            copyButtons.forEach(btn => {
+                // Remove any existing click event listeners to avoid duplicates
+                const oldListener = btn.__copyClickListener;
+                if (oldListener) {
+                    btn.removeEventListener('click', oldListener);
+                }
+                
+                // Add the new click event listener and store it for future reference
+                const newListener = (e) => {
+                    e.stopPropagation();
+                    const copyType = btn.getAttribute('data-copy-type');
+                    handleCopy(copyType);
+                };
+                btn.addEventListener('click', newListener);
+                btn.__copyClickListener = newListener; // Store the listener for later removal
+            });
+            
+            return; // Exit early, don't create new overlay
+        }
+    }
+    
+    // Create new overlay (first time or if something went wrong)
     if (overlayElement) {
         overlayElement.remove();
     }
@@ -202,36 +232,51 @@ function showInspectorOverlay(elementInfo) {
             handleCopy(copyType);
         });
     });
+    
+    // Add drag functionality
+    makeDraggable(overlayElement);
 }
 
 function createOverlayContent(info) {
     let content = `
         <div class="shadow-inspector-header">
-            <span>🔍 Element Inspector</span>
+            <div class="shadow-inspector-drag-handle">
+                <span class="shadow-inspector-drag-icon">⋮⋮</span>
+                <span>🔍 Element Inspector</span>
+            </div>
             <button class="shadow-inspector-close">×</button>
         </div>
         <div class="shadow-inspector-content">
-            <div class="shadow-inspector-section">
-                <h3>📋 Element Details <button class="shadow-inspector-copy-btn" data-copy-type="element" aria-label="Copy element details">Copy</button></h3>
-                <div class="shadow-inspector-property"><strong>Tag:</strong> &lt;${info.tagName}&gt;</div>
-                <div class="shadow-inspector-property"><strong>ID:</strong> ${info.id}</div>
-                <div class="shadow-inspector-property"><strong>Classes:</strong> ${info.classes}</div>
-                <div class="shadow-inspector-property"><strong>Text:</strong> ${info.textContent}</div>
-            </div>
-            
-            <div class="shadow-inspector-section">
-                <h3>🏷️ Attributes <button class="shadow-inspector-copy-btn" data-copy-type="attributes">Copy</button></h3>
-                ${info.attributes.map(attr => `<div class="shadow-inspector-property">${attr}</div>`).join('')}
-            </div>
-            
-            <div class="shadow-inspector-section">
-                <h3>🎨 Key Styles <button class="shadow-inspector-copy-btn" data-copy-type="styles">Copy</button></h3>
-                <div class="shadow-inspector-property"><strong>display:</strong> ${info.computedStyles.display}</div>
-                <div class="shadow-inspector-property"><strong>position:</strong> ${info.computedStyles.position}</div>
-                <div class="shadow-inspector-property"><strong>pointer-events:</strong> ${info.computedStyles.pointerEvents}</div>
-                <div class="shadow-inspector-property"><strong>visibility:</strong> ${info.computedStyles.visibility}</div>
-                <div class="shadow-inspector-property"><strong>opacity:</strong> ${info.computedStyles.opacity}</div>
-            </div>
+            ${createOverlayContentBody(info)}
+        </div>
+    `;
+    
+    return content;
+}
+
+function createOverlayContentBody(info) {
+    let content = `
+        <div class="shadow-inspector-section">
+            <h3>📋 Element Details <button class="shadow-inspector-copy-btn" data-copy-type="element" aria-label="Copy element details">Copy</button></h3>
+            <div class="shadow-inspector-property"><strong>Tag:</strong> &lt;${info.tagName}&gt;</div>
+            <div class="shadow-inspector-property"><strong>ID:</strong> ${info.id}</div>
+            <div class="shadow-inspector-property"><strong>Classes:</strong> ${info.classes}</div>
+            <div class="shadow-inspector-property"><strong>Text:</strong> ${info.textContent}</div>
+        </div>
+        
+        <div class="shadow-inspector-section">
+            <h3>🏷️ Attributes <button class="shadow-inspector-copy-btn" data-copy-type="attributes">Copy</button></h3>
+            ${info.attributes.map(attr => `<div class="shadow-inspector-property">${attr}</div>`).join('')}
+        </div>
+        
+        <div class="shadow-inspector-section">
+            <h3>🎨 Key Styles <button class="shadow-inspector-copy-btn" data-copy-type="styles">Copy</button></h3>
+            <div class="shadow-inspector-property"><strong>display:</strong> ${info.computedStyles.display}</div>
+            <div class="shadow-inspector-property"><strong>position:</strong> ${info.computedStyles.position}</div>
+            <div class="shadow-inspector-property"><strong>pointer-events:</strong> ${info.computedStyles.pointerEvents}</div>
+            <div class="shadow-inspector-property"><strong>visibility:</strong> ${info.computedStyles.visibility}</div>
+            <div class="shadow-inspector-property"><strong>opacity:</strong> ${info.computedStyles.opacity}</div>
+        </div>
     `;
     
     if (info.hasShadowRoot) {
@@ -268,10 +313,6 @@ function createOverlayContent(info) {
             </div>
         `;
     }
-    
-    content += `
-        </div>
-    `;
     
     return content;
 }
@@ -396,5 +437,145 @@ function fallbackCopy(text) {
     } catch (err) {
         console.error('Fallback copy failed:', err);
         showMessage('❌ Copy failed - please select text manually', 3000);
+    }
+}
+
+// Make the inspector overlay draggable
+function makeDraggable(element) {
+    const header = element.querySelector('.shadow-inspector-header');
+    const dragHandle = element.querySelector('.shadow-inspector-drag-handle');
+    
+    if (!header || !dragHandle) return;
+    
+    let isDragging = false;
+    let startX, startY, startLeft, startTop;
+    
+    // Prevent text selection during drag
+    const preventSelection = (e) => {
+        e.preventDefault();
+        return false;
+    };
+    
+    dragHandle.addEventListener('mousedown', (e) => {
+        // Don't start drag if clicking on close button
+        if (e.target.closest('.shadow-inspector-close')) return;
+        
+        isDragging = true;
+        element.classList.add('dragging');
+        
+        startX = e.clientX;
+        startY = e.clientY;
+        
+        const rect = element.getBoundingClientRect();
+        startLeft = rect.left;
+        startTop = rect.top;
+        
+        // Prevent text selection during drag
+        document.addEventListener('selectstart', preventSelection);
+        document.addEventListener('dragstart', preventSelection);
+        
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        
+        e.preventDefault();
+    });
+    
+    function handleMouseMove(e) {
+        if (!isDragging) return;
+        
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+        
+        let newLeft = startLeft + deltaX;
+        let newTop = startTop + deltaY;
+        
+        // Keep the overlay within viewport bounds
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const elementWidth = element.offsetWidth;
+        const elementHeight = element.offsetHeight;
+        
+        // Constrain to viewport
+        newLeft = Math.max(10, Math.min(newLeft, viewportWidth - elementWidth - 10));
+        newTop = Math.max(10, Math.min(newTop, viewportHeight - elementHeight - 10));
+        
+        element.style.left = newLeft + 'px';
+        element.style.top = newTop + 'px';
+        element.style.right = 'auto'; // Remove right positioning
+        
+        e.preventDefault();
+    }
+    
+    function handleMouseUp(e) {
+        if (!isDragging) return;
+        
+        isDragging = false;
+        element.classList.remove('dragging');
+        
+        // Remove event listeners
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('selectstart', preventSelection);
+        document.removeEventListener('dragstart', preventSelection);
+        
+        e.preventDefault();
+    }
+    
+    // Also handle touch events for mobile devices
+    dragHandle.addEventListener('touchstart', (e) => {
+        if (e.target.closest('.shadow-inspector-close')) return;
+        
+        const touch = e.touches[0];
+        isDragging = true;
+        element.classList.add('dragging');
+        
+        startX = touch.clientX;
+        startY = touch.clientY;
+        const rect = element.getBoundingClientRect();
+        startLeft = rect.left;
+        startTop = rect.top;
+        
+        document.addEventListener('touchmove', handleTouchMove, { passive: false });
+        document.addEventListener('touchend', handleTouchEnd);
+        
+        e.preventDefault();
+    });
+    
+    function handleTouchMove(e) {
+        if (!isDragging) return;
+        
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - startX;
+        const deltaY = touch.clientY - startY;
+        
+        let newLeft = startLeft + deltaX;
+        let newTop = startTop + deltaY;
+        
+        // Keep within viewport bounds
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const elementWidth = element.offsetWidth;
+        const elementHeight = element.offsetHeight;
+        
+        newLeft = Math.max(10, Math.min(newLeft, viewportWidth - elementWidth - 10));
+        newTop = Math.max(10, Math.min(newTop, viewportHeight - elementHeight - 10));
+        
+        element.style.left = newLeft + 'px';
+        element.style.top = newTop + 'px';
+        element.style.right = 'auto';
+        
+        e.preventDefault();
+    }
+    
+    function handleTouchEnd(e) {
+        if (!isDragging) return;
+        
+        isDragging = false;
+        element.classList.remove('dragging');
+        
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
+        
+        e.preventDefault();
     }
 }

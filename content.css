@@ -2,8 +2,8 @@
 
 .shadow-inspector-overlay {
     position: fixed !important;
-    top: 10px !important;
-    right: 10px !important;
+    top: 10px;
+    right: 10px;
     width: 400px !important;
     max-height: 80vh !important;
     background: white !important;
@@ -24,6 +24,11 @@
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
+    cursor: move !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
 }
 
 .shadow-inspector-close {
@@ -138,4 +143,26 @@
 
 .shadow-inspector-copy-btn:active {
     background: #1e7e34 !important;
+}
+
+.shadow-inspector-drag-handle {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    flex: 1 !important;
+}
+
+.shadow-inspector-drag-icon {
+    font-size: 14px !important;
+    opacity: 0.7 !important;
+}
+
+.shadow-inspector-overlay.dragging {
+    opacity: 0.8 !important;
+    transform: rotate(2deg) !important;
+    transition: none !important;
+}
+
+.shadow-inspector-overlay:not(.dragging) {
+    transition: all 0.2s ease !important;
 }
